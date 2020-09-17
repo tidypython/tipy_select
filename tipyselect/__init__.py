@@ -79,8 +79,17 @@ def str_range(rng):
     )
 
 
-def bare_string(string):
-    return SelectorContainer(lambda cols: [cols[cols.index(string)]])
+def bare_strings(*args):
+    args = [*args]
+
+    def check_cols(cols):
+        subset = OrderedSet(args)
+        if subset.issubset(cols):
+            return subset
+        else:
+            raise ValueError
+
+    return SelectorContainer(check_cols)
 
 
 def reverse(container):
