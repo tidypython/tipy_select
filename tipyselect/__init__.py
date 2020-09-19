@@ -79,6 +79,12 @@ def int_range(int_range):
     )
 
 
+def where(func):
+    return predicate(
+        lambda series, **kwargs: func(type=series.dtype, values=series.values)
+    )
+
+
 @dataclass
 class StringRange:
     start: str
