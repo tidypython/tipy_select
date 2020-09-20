@@ -99,10 +99,10 @@ def str_range(str_range):
     )
 
 
-def indexed_items(df, start=0):
+def enumerate2(iterator, start=0):
     n = start
-    for name, series in df.items():
-        yield n, name, series
+    for (*yields,) in iterator:
+        yield n, *yields
         n += 1
 
 
@@ -112,7 +112,7 @@ def eval_tidy(df, predicate):
 
     return [
         name
-        for index, name, series in indexed_items(df)
+        for index, name, series in enumerate2(df.items())
         if predicate(
             index=index, name=name, series=series, size=size, reverse_dict=reverse_dict
         )
