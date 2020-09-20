@@ -1,7 +1,8 @@
 import re
+import operator
 
 from dataclasses import dataclass
-from functools import singledispatch, update_wrapper
+from functools import reduce, singledispatch, update_wrapper
 from ordered_set import OrderedSet
 
 
@@ -13,7 +14,7 @@ class Selector(object):
         return self.selector(cols)
 
     def __neg__(self):
-        return Selector(lambda cols: everything()(cols) - self(cols))
+        return Selector(lambda cols: OrderedSet(cols.keys()) - self(cols))
 
     def __reversed__(self):
         return Selector(lambda cols: OrderedSet(reversed(self(cols))))
@@ -57,18 +58,32 @@ def predicate_selector(predicate):
     return result
 
 
+def variadic_predicate(simple_predicate):
+    def predicate(*args):
+        if len(args) == 1:
+            return simple_predicate(*args)
+        else:
+            return reduce(operator.__or__, map(simple_predicate, args))
+
+    return predicate
+
+
+@variadic_predicate
 def starts_with(prefix):
     return predicate_selector(lambda name, **kwargs: name.startswith(prefix))
 
 
+@variadic_predicate
 def ends_with(suffix):
     return predicate_selector(lambda name, **kwargs: name.endswith(suffix))
 
 
+@variadic_predicate
 def contains(part):
     return predicate_selector(lambda name, **kwargs: part in name)
 
 
+@variadic_predicate
 def matches(regexp):
     return predicate_selector(
         lambda name, **kwargs: re.search(regexp, name) is not None
@@ -109,12 +124,14 @@ def last_col(offset=0):
     return dict_selector(lambda cols: cols.keys()[-1 - offset])
 
 
+@variadic_predicate
 def int_range(int_range):
     return dict_selector(
         lambda cols: cols.keys()[(int_range.start) : (int_range.stop + 1)]
     )
 
 
+@variadic_predicate
 def where(func):
     return predicate_selector(
         lambda series, **kwargs: func(type=series.dtype, values=series.values)
@@ -134,6 +151,7 @@ def enumerate2(iterator, start=0):
         index += 1
 
 
+@variadic_predicate
 def str_range(str_range):
     def selector(cols, **kwargs):
         reverse_dict = {name: index for index, name, series in enumerate2(cols.items())}
