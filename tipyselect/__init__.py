@@ -70,7 +70,9 @@ def contains(part):
 
 
 def matches(regexp):
-    return predicate_selector(lambda name, **kwargs: re.search(regexp, name) is True)
+    return predicate_selector(
+        lambda name, **kwargs: re.search(regexp, name) is not None
+    )
 
 
 def num_range(prefix, int_range, width=0):
