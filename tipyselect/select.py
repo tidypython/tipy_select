@@ -24,6 +24,12 @@ def everything():
     return dict_selector(lambda cols: cols.keys())
 
 
+# This is equivalent to any_of(col), but avoids the extra set machinery.
+# Should it be strict, like all_of?
+def column(col):
+    return predicate_selector(lambda name, **kwargs: name == col)
+
+
 def all_of(*args):
     return one_of(*args, strict=True)
 
