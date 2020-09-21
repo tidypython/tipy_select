@@ -56,6 +56,10 @@ def predicate_selector(predicate):
     return result
 
 
+def reduce_selectors(selectors):
+    return reduce(operator.__or__, selectors)
+
+
 def result_set(results):
     return OrderedSet(results)
 
@@ -65,6 +69,6 @@ def variadic_predicate(simple_predicate):
         if len(args) == 1:
             return simple_predicate(*args)
         else:
-            return reduce(operator.__or__, map(simple_predicate, args))
+            return reduce_selectors(map(simple_predicate, args))
 
     return predicate

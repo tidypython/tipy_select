@@ -3,11 +3,17 @@ import re
 from dataclasses import dataclass
 
 from .adapters import df_cols
-from .base import dict_selector, predicate_selector, result_set, variadic_predicate
+from .base import (
+    dict_selector,
+    predicate_selector,
+    reduce_selectors,
+    result_set,
+    variadic_predicate,
+)
 
 
-def select(df, selector):
-    return selector(df_cols(df))
+def select(df, *selectors):
+    return reduce_selectors(selectors)(df_cols(df))
 
 
 # -----------------------------------------------------------
