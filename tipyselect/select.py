@@ -25,18 +25,29 @@ def everything():
 
 
 def all_of(*args):
-    def selector(cols):
-        subset = result_set(args)
-        if subset.issubset(result_set(cols.keys())):
-            return subset
-        else:
-            raise ValueError
-
-    return dict_selector(selector)
+    return one_of(*args, strict=True)
 
 
 def any_of(*args):
-    return predicate_selector(lambda name, **kwargs: name in [*args])
+    return one_of(*args, strict=False)
+
+
+def one_of(*args, strict=False):
+    def selector(cols):
+        subset = result_set(args)
+        colset = result_set(cols.keys())
+        if subset.issubset(colset):
+            return subset
+        else:
+            if strict:
+                diff = subset.difference(colset)
+                raise ValueError(
+                    f"Selector `all_of` called with non-existent columns: {diff}."
+                )
+            else:
+                return subset.intersection(colset)
+
+    return dict_selector(selector)
 
 
 # -----------------------------------------------------------
