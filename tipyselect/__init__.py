@@ -1,6 +1,7 @@
 from .select import (
     select,
     everything,
+    column,
     all_of,
     any_of,
     starts_with,
