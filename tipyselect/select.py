@@ -48,7 +48,7 @@ def one_of(*args, strict=False):
             if strict:
                 diff = subset.difference(colset)
                 raise ValueError(
-                    f"Selector `all_of` called with non-existent columns: {diff}."
+                    f"Selector `all_of` called with non-existent columns: {', '.join(diff)}."
                 )
             else:
                 return subset.intersection(colset)
@@ -152,6 +152,11 @@ def where(func):
 def rename(dict):
     def selector(cols):
         diff = result_set(dict.values()) - result_set(cols.keys())
-        return result_set([(k, v) for k, v in dict.items() if v not in diff])
+        if not diff:
+            return result_set([(k, v) for k, v in dict.items()])
+        else:
+            raise ValueError(
+                f"Selector `rename` called with non-existent columns: {', '.join(diff)}."
+            )
 
     return dict_selector(selector)
