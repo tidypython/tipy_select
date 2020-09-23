@@ -13,4 +13,5 @@ from .select import (
     num_range,
     str_range,
     where,
+    rename,
 )

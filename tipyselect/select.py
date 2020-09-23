@@ -142,3 +142,16 @@ def where(func):
     return predicate_selector(
         lambda series, **kwargs: func(type=series.dtype, values=series.values)
     )
+
+
+# -----------------------------------------------------------
+# Content matching selectors
+
+
+@variadic_predicate
+def rename(dict):
+    def selector(cols):
+        diff = result_set(dict.values()) - result_set(cols.keys())
+        return result_set([(k, v) for k, v in dict.items() if v not in diff])
+
+    return dict_selector(selector)
