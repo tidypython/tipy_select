@@ -64,11 +64,11 @@ def result_set(results):
     return OrderedSet(results)
 
 
-def variadic_predicate(simple_predicate):
-    def predicate(*args):
+def variadic_selector(simple_selector):
+    def selector(*args):
         if len(args) == 1:
-            return simple_predicate(*args)
+            return simple_selector(*args)
         else:
-            return reduce_selectors(map(simple_predicate, args))
+            return reduce_selectors(map(simple_selector, args))
 
-    return predicate
+    return selector

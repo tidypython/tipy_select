@@ -8,7 +8,7 @@ from .base import (
     predicate_selector,
     reduce_selectors,
     result_set,
-    variadic_predicate,
+    variadic_selector,
 )
 
 
@@ -60,22 +60,22 @@ def one_of(*args, strict=False):
 # Name-matching selectors
 
 
-@variadic_predicate
+@variadic_selector
 def starts_with(prefix):
     return predicate_selector(lambda name, **kwargs: name.startswith(prefix))
 
 
-@variadic_predicate
+@variadic_selector
 def ends_with(suffix):
     return predicate_selector(lambda name, **kwargs: name.endswith(suffix))
 
 
-@variadic_predicate
+@variadic_selector
 def contains(part):
     return predicate_selector(lambda name, **kwargs: part in name)
 
 
-@variadic_predicate
+@variadic_selector
 def matches(regexp):
     return predicate_selector(
         lambda name, **kwargs: re.search(regexp, name) is not None
@@ -90,7 +90,7 @@ def last_col(offset=0):
     return dict_selector(lambda cols: cols.keys()[-1 - offset])
 
 
-@variadic_predicate
+@variadic_selector
 def int_range(int_range):
     return dict_selector(
         lambda cols: cols.keys()[(int_range.start) : (int_range.stop + 1)]
@@ -121,7 +121,7 @@ def enumerate2(iterator, start=0):
         index += 1
 
 
-@variadic_predicate
+@variadic_selector
 def str_range(str_range):
     def selector(cols, **kwargs):
         reverse_dict = {name: index for index, name, series in enumerate2(cols.items())}
@@ -137,7 +137,7 @@ def str_range(str_range):
 # Content matching selectors
 
 
-@variadic_predicate
+@variadic_selector
 def where(func):
     return predicate_selector(
         lambda series, **kwargs: func(type=series.dtype, values=series.values)
@@ -148,7 +148,7 @@ def where(func):
 # Content matching selectors
 
 
-@variadic_predicate
+@variadic_selector
 def rename(dict):
     def selector(cols):
         diff = result_set(dict.values()) - result_set(cols.keys())
