@@ -1,8 +1,82 @@
 import re
 
 from dataclasses import dataclass
-from functools import singledispatch
+from functools import singledispatch, update_wrapper
 from ordered_set import OrderedSet
+
+
+class Predicate(object):
+    def __init__(self, predicate):
+        self.predicate = predicate
+
+    def __call__(self, *args, **kwargs):
+        return self.predicate(*args, **kwargs)
+
+    def __not__(self):
+        return Predicate(lambda *args, **kwargs: not self.predicate(*args, **kwargs))
+
+    def __and__(self, predicate):
+        return Predicate(
+            lambda *args, **kwargs: self.predicate(*args, **kwargs)
+            and predicate(*args, **kwargs)
+        )
+
+    def __or__(self, predicate):
+        return Predicate(
+            lambda *args, **kwargs: self.predicate(*args, **kwargs)
+            or predicate(*args, **kwargs)
+        )
+
+
+def predicate(func):
+    result = Predicate(func)
+    update_wrapper(result, func)
+    return result
+
+
+def everything():
+    return predicate(lambda **kwargs: True)
+
+
+def starts_with(prefix):
+    return predicate(lambda name, **kwargs: name.startswith(prefix))
+
+
+def ends_with(suffix):
+    return predicate(lambda name, **kwargs: name.endswith(suffix))
+
+
+def contains(part):
+    return predicate(lambda name, **kwargs: part in name)
+
+
+def matches(regexp):
+    return predicate(lambda name, **kwargs: re.search(regexp, name))
+
+
+def one_of(*args):
+    return predicate(lambda name, **kwargs: name in [*args])
+
+
+def num_range(prefix, int_range, width=0):
+    new_range = [
+        str(x).rjust(width, "0")
+        for x in list(range(int_range.start, int_range.stop + 1))
+    ]
+    return predicate(
+        lambda name, **kwargs: name.startswith(prefix)
+        and name[len(prefix) :] in new_range
+    )
+
+
+def last_col(offset=0):
+    return predicate(lambda index, size, **kwargs: size == index - offset + 1)
+
+
+def int_range(int_range):
+    return predicate(
+        lambda index, **kwargs: int_range.start <= index & index <= int_range.stop
+    )
 
 
 @dataclass
@@ -11,107 +85,29 @@ class StringRange:
     stop: str
 
 
-class SelectorContainer:
-    def __init__(self, function):
-        self.function = function
-        self.reversed = False
-
-    def eval(self, cols):
-        if not self.reversed:
-            result = self.function(cols)
-        else:
-            result = list(OrderedSet(cols).difference(self.function(cols)))
-
-        return result
-
-    def reverse(self):
-        self.reversed = not self.reversed
-        return self
-
-
-def starts_with(match):
-    return SelectorContainer(lambda cols: [x for x in cols if x.startswith(match)])
-
-
-def ends_with(match):
-    return SelectorContainer(lambda cols: [x for x in cols if x.endswith(match)])
-
-
-def contains(match):
-    return SelectorContainer(lambda cols: [x for x in cols if match in x])
-
-
-def matches(match):
-    return SelectorContainer(lambda cols: [x for x in cols if re.search(match, x)])
-
-
-def everything():
-    return SelectorContainer(lambda cols: cols)
-
-
-def last_col(offset=0):
-    return SelectorContainer(lambda cols: [cols[-1 - offset]])
-
-
-def one_of(*args):
-    args = OrderedSet([*args])
-    return SelectorContainer(lambda cols: list(args.intersection(cols)))
-
-
-def num_range(prefix, int_range, width=None):
-    new_range = [str(x) for x in list(range(int_range.start, int_range.stop + 1))]
-    if width:
-        new_range = [x.rjust(width, "0") for x in new_range]
-
-    select_cols = OrderedSet([prefix + x for x in new_range])
-    return SelectorContainer(
-        lambda cols: list(OrderedSet(cols).intersection(select_cols))
+def str_range(str_range):
+    return predicate(
+        lambda index, reverse_dict, **kwargs: reverse_dict[(str_range.start)]
+        <= index & index
+        <= reverse_dict[(str_range.stop)]
     )
 
 
-def int_range(rng):
-    return SelectorContainer(lambda cols: cols[rng.start : rng.stop + 1])
+def indexed_items(df, start=0):
+    n = start
+    for name, series in df.items():
+        yield n, name, series
+        n += 1
 
 
-def str_range(rng):
-    return SelectorContainer(
-        lambda cols: cols[cols.index(rng.start) : cols.index(rng.stop) + 1]
-    )
+def eval_tidy(df, predicate):
+    reverse_dict = {name: index for index, name in enumerate(df.keys())}
+    size = df.size
 
-
-def bare_strings(*args):
-    args = [*args]
-
-    def check_cols(cols):
-        subset = OrderedSet(args)
-        if subset.issubset(cols):
-            return subset
-        else:
-            raise ValueError
-
-    return SelectorContainer(check_cols)
-
-
-def reverse(container):
-    return container.reverse()
-
-
-def union(container1, container2):
-    return SelectorContainer(
-        lambda cols: list(
-            OrderedSet(container1.eval(cols)).union(container2.eval(cols))
+    return [
+        name
+        for index, name, series in indexed_items(df)
+        if predicate(
+            index=index, name=name, series=series, size=size, reverse_dict=reverse_dict
         )
-    )
-
-
-def intersection(container1, container2):
-    return SelectorContainer(
-        lambda cols: list(
-            OrderedSet(container1.eval(cols)).intersection(container2.eval(cols))
-        )
-    )
-
-
-def eval_tidy(cols, *args):
-    args = [*args]
-    return [x.eval(cols) for x in args]
+    ]
